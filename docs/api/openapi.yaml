@@ -1,0 +1,187 @@
+openapi: "3.1.0"
+info:
+  title: Brain Perception API
+  version: "1.0.0"
+  description: 多模态感知基础设施 HTTP API
+
+servers:
+  - url: http://localhost:8000
+    description: 本地开发
+
+paths:
+  /api/v1/ingest:
+    post:
+      operationId: ingest
+      summary: 注册资产并触发感知流水线
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRequest"
+      responses:
+        "200":
+          description: 资产已注册，返回 job 信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResponse"
+
+  /api/v1/analyze:
+    post:
+      operationId: analyze
+      summary: 对已注册资产执行感知分析
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeRequest"
+      responses:
+        "200":
+          description: 分析任务已提交
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalyzeResponse"
+
+  /api/v1/search:
+    post:
+      operationId: search
+      summary: 向量相似度搜索
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchResponse"
+
+  /api/v1/result/{pipeline_id}:
+    get:
+      operationId: get_result
+      summary: 获取感知结果
+      parameters:
+        - name: pipeline_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: 感知结果信封
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultEnvelope"
+
+components:
+  schemas:
+    IngestRequest:
+      type: object
+      required: [oss_path]
+      properties:
+        oss_path:
+          type: string
+          description: OSS 存储路径
+        asset_type:
+          type: string
+          enum: [video, audio, image]
+          default: video
+        filename:
+          type: string
+        stages:
+          type: array
+          items:
+            type: string
+          description: 要执行的感知阶段（空则执行全部）
+
+    IngestResponse:
+      type: object
+      properties:
+        asset_id:
+          type: string
+        job_id:
+          type: string
+        status:
+          type: string
+
+    AnalyzeRequest:
+      type: object
+      required: [asset_id]
+      properties:
+        asset_id:
+          type: string
+        stages:
+          type: array
+          items:
+            type: string
+          description: "要执行的阶段: audio / visual / text / align / fusion"
+        config:
+          type: object
+          description: 运行时配置覆盖
+
+    AnalyzeResponse:
+      type: object
+      properties:
+        job_id:
+          type: string
+        pipeline_id:
+          type: string
+        status:
+          type: string
+
+    SearchRequest:
+      type: object
+      required: [query_vector]
+      properties:
+        query_vector:
+          type: array
+          items:
+            type: number
+        top_k:
+          type: integer
+          default: 10
+        namespace:
+          type: string
+          default: v1
+        filters:
+          type: object
+          description: 元数据过滤条件
+
+    SearchResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/SearchHit"
+
+    SearchHit:
+      type: object
+      properties:
+        id:
+          type: string
+        score:
+          type: number
+        metadata:
+          type: object
+
+    ResultEnvelope:
+      type: object
+      required: [asset_meta, pipeline]
+      properties:
+        asset_meta:
+          type: object
+        pipeline:
+          type: object
+        outputs:
+          type: array
+        embedding_ids:
+          type: array

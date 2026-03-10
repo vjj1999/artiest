@@ -1,0 +1,299 @@
+{
+  "$defs": {
+    "AssetMeta": {
+      "description": "资产元信息",
+      "properties": {
+        "asset_id": {
+          "description": "全局唯一资产 ID",
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "asset_type": {
+          "$ref": "#/$defs/AssetType",
+          "default": "video"
+        },
+        "oss_path": {
+          "description": "OSS 存储路径",
+          "title": "Oss Path",
+          "type": "string"
+        },
+        "filename": {
+          "default": "",
+          "title": "Filename",
+          "type": "string"
+        },
+        "duration_s": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "时长（秒）",
+          "title": "Duration S"
+        },
+        "size_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "文件大小",
+          "title": "Size Bytes"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "asset_id",
+        "oss_path"
+      ],
+      "title": "AssetMeta",
+      "type": "object"
+    },
+    "AssetType": {
+      "description": "资产类型",
+      "enum": [
+        "video",
+        "audio",
+        "image"
+      ],
+      "title": "AssetType",
+      "type": "string"
+    },
+    "EmbeddingRef": {
+      "description": "向量存储引用",
+      "properties": {
+        "store": {
+          "description": "向量存储标识: milvus / qdrant",
+          "title": "Store",
+          "type": "string"
+        },
+        "collection": {
+          "description": "集合名",
+          "title": "Collection",
+          "type": "string"
+        },
+        "embedding_id": {
+          "description": "向量 ID",
+          "title": "Embedding Id",
+          "type": "string"
+        },
+        "embedding_version": {
+          "default": "v1",
+          "description": "嵌入模型版本",
+          "title": "Embedding Version",
+          "type": "string"
+        },
+        "dim": {
+          "description": "向量维度",
+          "title": "Dim",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "store",
+        "collection",
+        "embedding_id",
+        "dim"
+      ],
+      "title": "EmbeddingRef",
+      "type": "object"
+    },
+    "PipelineInfo": {
+      "description": "流水线执行信息",
+      "properties": {
+        "pipeline_id": {
+          "description": "本次执行 ID",
+          "title": "Pipeline Id",
+          "type": "string"
+        },
+        "stages": {
+          "description": "已执行的阶段列表",
+          "items": {
+            "type": "string"
+          },
+          "title": "Stages",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/StageStatus",
+          "default": "pending"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "total_duration_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Total Duration Ms"
+        },
+        "config": {
+          "description": "执行时配置快照",
+          "title": "Config",
+          "type": "object"
+        }
+      },
+      "required": [
+        "pipeline_id"
+      ],
+      "title": "PipelineInfo",
+      "type": "object"
+    },
+    "StageResult": {
+      "description": "单个感知阶段的输出",
+      "properties": {
+        "stage": {
+          "description": "阶段名: audio / visual / text / align / fusion",
+          "title": "Stage",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/StageStatus",
+          "default": "pending"
+        },
+        "started_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Started At"
+        },
+        "finished_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Finished At"
+        },
+        "duration_ms": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration Ms"
+        },
+        "data": {
+          "description": "阶段输出数据",
+          "title": "Data",
+          "type": "object"
+        },
+        "error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error"
+        }
+      },
+      "required": [
+        "stage"
+      ],
+      "title": "StageResult",
+      "type": "object"
+    },
+    "StageStatus": {
+      "description": "阶段执行状态",
+      "enum": [
+        "pending",
+        "running",
+        "success",
+        "failed",
+        "skipped"
+      ],
+      "title": "StageStatus",
+      "type": "string"
+    }
+  },
+  "description": "多模态感知结果统一信封",
+  "properties": {
+    "asset_meta": {
+      "$ref": "#/$defs/AssetMeta"
+    },
+    "pipeline": {
+      "$ref": "#/$defs/PipelineInfo"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/StageResult"
+      },
+      "title": "Outputs",
+      "type": "array"
+    },
+    "embedding_ids": {
+      "items": {
+        "$ref": "#/$defs/EmbeddingRef"
+      },
+      "title": "Embedding Ids",
+      "type": "array"
+    }
+  },
+  "required": [
+    "asset_meta",
+    "pipeline"
+  ],
+  "title": "ResultEnvelope",
+  "type": "object"
+}

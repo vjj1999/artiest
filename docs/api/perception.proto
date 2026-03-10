@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+package brain.perception.v1;
+
+option go_package = "brain/perception/v1;perceptionv1";
+
+// ── 服务定义 ──
+
+service PerceptionService {
+  // 注册资产并触发感知流水线
+  rpc Ingest(IngestRequest) returns (IngestResponse);
+
+  // 对已注册资产执行感知分析
+  rpc Analyze(AnalyzeRequest) returns (AnalyzeResponse);
+
+  // 向量相似度搜索
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // 获取感知结果
+  rpc GetResult(GetResultRequest) returns (ResultEnvelope);
+}
+
+// ── 请求/响应 ──
+
+message IngestRequest {
+  string oss_path = 1;
+  string asset_type = 2;   // video / audio / image
+  string filename = 3;
+  repeated string stages = 4;  // 要执行的感知阶段
+}
+
+message IngestResponse {
+  string asset_id = 1;
+  string job_id = 2;
+  string status = 3;
+}
+
+message AnalyzeRequest {
+  string asset_id = 1;
+  repeated string stages = 2;  // audio / visual / text / align / fusion
+  map<string, string> config = 3;
+}
+
+message AnalyzeResponse {
+  string job_id = 1;
+  string pipeline_id = 2;
+  string status = 3;
+}
+
+message SearchRequest {
+  repeated float query_vector = 1;
+  int32 top_k = 2;
+  string namespace = 3;
+  map<string, string> filters = 4;
+}
+
+message SearchResponse {
+  repeated SearchHit results = 1;
+}
+
+message SearchHit {
+  string id = 1;
+  float score = 2;
+  map<string, string> metadata = 3;
+}
+
+message GetResultRequest {
+  string pipeline_id = 1;
+}
+
+// ── 结果信封 ──
+
+message ResultEnvelope {
+  AssetMeta asset_meta = 1;
+  PipelineInfo pipeline = 2;
+  repeated StageResult outputs = 3;
+  repeated EmbeddingRef embedding_ids = 4;
+}
+
+message AssetMeta {
+  string asset_id = 1;
+  string asset_type = 2;
+  string oss_path = 3;
+  string filename = 4;
+  double duration_s = 5;
+  int64 size_bytes = 6;
+  string created_at = 7;
+}
+
+message PipelineInfo {
+  string pipeline_id = 1;
+  repeated string stages = 2;
+  string status = 3;
+  string started_at = 4;
+  string finished_at = 5;
+  double total_duration_ms = 6;
+  map<string, string> config = 7;
+}
+
+message StageResult {
+  string stage = 1;
+  string status = 2;
+  string started_at = 3;
+  string finished_at = 4;
+  double duration_ms = 5;
+  string data_json = 6;   // 阶段输出 JSON 序列化
+  string error = 7;
+}
+
+message EmbeddingRef {
+  string store = 1;
+  string collection = 2;
+  string embedding_id = 3;
+  string embedding_version = 4;
+  int32 dim = 5;
+}

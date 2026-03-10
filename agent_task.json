@@ -1,0 +1,182 @@
+{
+    "project": "multimodal_perception_infra",
+    "version": "v1.0",
+    "environment": {
+      "object_storage": "OSS",
+      "metadata_store": "MongoDB",
+      "vector_store": ["Milvus", "Qdrant"],
+      "protocols": ["HTTP", "gRPC"]
+    },
+    "phases": [
+      {
+        "phase": "P0_minimum_runnable",
+        "tasks": [
+          {
+            "id": "T1_schema_envelope",
+            "title": "Define Result Envelope JSON Schema",
+            "inputs": [],
+            "outputs": [
+              "libs/schema/result_envelope.jsonschema",
+              "docs/schema/result_envelope.md"
+            ],
+            "acceptance_criteria": [
+              "JSON validates sample result",
+              "Includes asset_meta, pipeline, outputs, embedding_ids"
+            ],
+            "complexity": "medium",
+            "depends_on": []
+          },
+          {
+            "id": "T2_mongo_setup",
+            "title": "Initialize Mongo Collections",
+            "inputs": ["Mongo connection"],
+            "outputs": [
+              "deploy/mongo_init.js",
+              "docs/storage/mongo_collections.md"
+            ],
+            "acceptance_criteria": [
+              "assets collection created",
+              "perception_results collection created",
+              "jobs collection created"
+            ],
+            "complexity": "low",
+            "depends_on": ["T1_schema_envelope"]
+          },
+          {
+            "id": "T3_vector_interface",
+            "title": "Implement Vector Store Interface (Milvus/Qdrant)",
+            "inputs": ["Milvus", "Qdrant"],
+            "outputs": [
+              "libs/clients/vector_store_interface",
+              "libs/clients/milvus_store",
+              "libs/clients/qdrant_store"
+            ],
+            "acceptance_criteria": [
+              "upsert/search/delete works in both",
+              "namespace supports embedding_version"
+            ],
+            "complexity": "high",
+            "depends_on": []
+          },
+          {
+            "id": "T4_api_spec",
+            "title": "Define OpenAPI + gRPC Spec",
+            "inputs": [],
+            "outputs": [
+              "docs/api/openapi.yaml",
+              "docs/api/perception.proto"
+            ],
+            "acceptance_criteria": [
+              "ingest/analyze/search/get_result defined",
+              "Fields consistent across HTTP and gRPC"
+            ],
+            "complexity": "medium",
+            "depends_on": ["T1_schema_envelope"]
+          },
+          {
+            "id": "T5_ingest_service",
+            "title": "Implement Ingest Service",
+            "inputs": ["OSS", "Mongo"],
+            "outputs": ["services/ingest"],
+            "acceptance_criteria": [
+              "Registers asset_id",
+              "Writes to Mongo",
+              "Supports OSS path input"
+            ],
+            "complexity": "medium",
+            "depends_on": ["T2_mongo_setup", "T4_api_spec"]
+          },
+          {
+            "id": "T6_audio_mvp",
+            "title": "Audio Service MVP",
+            "inputs": ["video file"],
+            "outputs": ["services/audio"],
+            "acceptance_criteria": [
+              "Detects silent audio",
+              "Outputs silence_ratio",
+              "Computes rms_mean and zcr"
+            ],
+            "complexity": "medium",
+            "depends_on": ["T4_api_spec"]
+          },
+          {
+            "id": "T7_orchestrator",
+            "title": "Implement Orchestrator",
+            "inputs": ["Ingest Service", "Audio Service", "Vector Interface"],
+            "outputs": ["services/orchestrator"],
+            "acceptance_criteria": [
+              "analyze triggers audio pipeline",
+              "Writes results to Mongo",
+              "Writes embeddings to vector store"
+            ],
+            "complexity": "high",
+            "depends_on": ["T5_ingest_service", "T6_audio_mvp", "T3_vector_interface"]
+          },
+          {
+            "id": "T8_search_endpoint",
+            "title": "Implement Search Endpoint",
+            "inputs": ["Vector Store"],
+            "outputs": ["services/orchestrator/search_handler"],
+            "acceptance_criteria": [
+              "top_k search works",
+              "metadata filters work"
+            ],
+            "complexity": "medium",
+            "depends_on": ["T3_vector_interface", "T7_orchestrator"]
+          }
+        ]
+      },
+      {
+        "phase": "P1_multimodal",
+        "tasks": [
+          {
+            "id": "T9_visual_mvp",
+            "title": "Visual Service MVP",
+            "outputs": ["services/visual"],
+            "acceptance_criteria": [
+              "Extracts frames",
+              "Computes motion score",
+              "Outputs visual_fingerprint"
+            ],
+            "complexity": "medium",
+            "depends_on": ["T7_orchestrator"]
+          },
+          {
+            "id": "T10_text_mvp",
+            "title": "Text Service MVP (ASR + metrics)",
+            "outputs": ["services/text"],
+            "acceptance_criteria": [
+              "ASR transcript produced",
+              "Computes token_per_sec",
+              "CTA keyword detection works"
+            ],
+            "complexity": "high",
+            "depends_on": ["T7_orchestrator"]
+          },
+          {
+            "id": "T11_alignment",
+            "title": "Time Alignment Service",
+            "outputs": ["services/align"],
+            "acceptance_criteria": [
+              "Unified timeline generated",
+              "Segments align with timestamps"
+            ],
+            "complexity": "medium",
+            "depends_on": ["T9_visual_mvp", "T10_text_mvp"]
+          },
+          {
+            "id": "T12_fusion",
+            "title": "Fusion Embedding + Script Graph",
+            "outputs": ["services/fusion"],
+            "acceptance_criteria": [
+              "Fusion embedding generated",
+              "script_graph JSON matches schema"
+            ],
+            "complexity": "high",
+            "depends_on": ["T9_visual_mvp", "T10_text_mvp", "T11_alignment"]
+          }
+        ]
+      }
+    ]
+  }
+  
